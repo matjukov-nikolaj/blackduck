@@ -4,6 +4,6 @@ import com.capitalone.dashboard.model.BlackDuck;
 import com.capitalone.dashboard.model.BlackDuckProject;
 
 public interface BlackDuckClient {
-    BlackDuckProject getProject(String instanceUrl);
+    BlackDuckProject getBlackDuckProject(String instanceUrl);
     BlackDuck currentBlackDuckMetrics(BlackDuckProject project);
 }

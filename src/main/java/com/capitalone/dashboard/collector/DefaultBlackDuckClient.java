@@ -29,36 +29,35 @@ import java.util.*;
 public class DefaultBlackDuckClient implements BlackDuckClient {
     private static final Log LOG = LogFactory.getLog(DefaultBlackDuckClient.class);
 
-    private static final String PROJECT_TIMESTAMP = "ProjectTimestamp";
-    private static final String PROJECT_NAME = "ProjectName";
-    private static final String SCAN_START = "ScanStart";
+    private static final String PROJECT_TIMESTAMP = "Last Updated:";
+    private static final String PROJECT_NAME = "Name:";
+    private static final String TR_TAG = "tr";
+    private static final String NUMBER_OF_FILES = "Number of Files:";
+    private static final String FILES_WITH_VIOLATIONS = "Files with Violations:";
+    private static final String FILES_PENDING_IDENTIFICATION = "Files Pending Identification:";
     private static final String PROTOCOL_SPLITTER = "://";
-    private static final String DATE_FORMAT = "EEEE, MMMM d, yyyy h:mm:ss a";
-
+    private static final String DATE_FORMAT = "MMMM d, yyyy h:mm a";
     private Map<String, String> metrics = new HashMap<>();
+
+    private BlackDuckProject project = new BlackDuckProject();
+    private BlackDuck blackDuckMetrics = new BlackDuck();
     private BlackDuckSettings settings;
 
     @Autowired
     public DefaultBlackDuckClient(BlackDuckSettings settings) {
         this.settings = settings;
+        this.initializationMetrics();
     }
 
     @Override
-    public BlackDuckProject getProject(String instanceUrl) {
+    public BlackDuckProject getBlackDuckProject(String instanceUrl) {
         BlackDuckProject project = new BlackDuckProject();
         try {
             instanceUrl = getUrlWithUserData(instanceUrl);
-            URL url = new URL(instanceUrl);
-            URLConnection urlConn = url.openConnection();
-            InputStreamReader inputCSV = new InputStreamReader(
-                    ((URLConnection) urlConn).getInputStream());
-            CSVParser parser = new CSVParser(inputCSV, CSVFormat.EXCEL);
-            String check, name, time;
-            for (CSVRecord csvRecord : parser) {
-                check = csvRecord.get(1);
-
-                name = csvRecord.get(2);
-                time = csvRecord.get(3);
+            Document document = getDocument(instanceUrl);
+            if (document != null) {
+                project = getProject(document);
+                project.setInstanceUrl(instanceUrl);
             }
         } catch (Exception e) {
             LOG.error(e);
@@ -70,11 +69,78 @@ public class DefaultBlackDuckClient implements BlackDuckClient {
     public BlackDuck currentBlackDuckMetrics(BlackDuckProject project) {
         BlackDuck blackDuck = new BlackDuck();
         try {
-            blackDuck.setName("lol");
+            initializationMetrics();
         } catch (Exception e) {
             LOG.error(e);
         }
         return blackDuck;
+    }
+
+    private void initializationMetrics() {
+        this.metrics.put(NUMBER_OF_FILES, "");
+        this.metrics.put(FILES_WITH_VIOLATIONS, "");
+        this.metrics.put(FILES_PENDING_IDENTIFICATION, "");
+    }
+
+    private BlackDuckProject getProject(Document document) {
+        BlackDuckProject project = new BlackDuckProject();
+        try {
+            NodeList trTags = document.getElementsByTagName(TR_TAG);
+            String projectName = "";
+            for (int i = 0; i < trTags.getLength(); ++i) {
+                Node trTag = trTags.item(i);
+                String value = getNodeValue(trTag);
+                if (value.equals(PROJECT_NAME)) {
+                    Node tdTag = trTag.getLastChild().getPreviousSibling();
+                    projectName = tdTag.getFirstChild().getNodeValue();
+                }
+                if (value.equals(PROJECT_TIMESTAMP)) {
+                    Node tdTag = trTag.getLastChild().getPreviousSibling();
+                    String date = tdTag.getFirstChild().getNodeValue();
+                    project.setProjectTimestamp(Long.toString(getTimeStamp(date)));
+                    project.setProjectName(getProjectName(projectName, date));
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(e);
+        }
+        return project;
+    }
+
+
+    private String getNodeValue(Node node) {
+        Node thTag = node.getFirstChild();
+        return thTag.getNextSibling().getFirstChild().getNodeValue();
+    }
+
+    private String getProjectName(String name, String testingDate) {
+        Date date = getProjectDate(testingDate);
+        if (date == null) {
+            return name;
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.MONTH, 1);
+        return name + ":"
+                + calendar.get(Calendar.YEAR) + "-"
+                + calendar.get(Calendar.MONTH) + "-"
+                + calendar.get(Calendar.DAY_OF_MONTH);
+    }
+
+    private Document getDocument(String instanceUrl) {
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            URL url = new URL(instanceUrl);
+            Document document = db.parse(url.openStream());
+            document.getDocumentElement().normalize();
+            return document;
+
+        } catch (Exception e) {
+            LOG.error("Could not parse document from: " + instanceUrl, e);
+        }
+        return null;
     }
 
     public void setSettings(BlackDuckSettings settings) {

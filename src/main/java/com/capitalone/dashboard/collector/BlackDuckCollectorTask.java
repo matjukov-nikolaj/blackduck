@@ -72,7 +72,7 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
         clean(collector, existingProjects);
 
         String instanceUrl = collector.getBlackDuckServer();
-        BlackDuckProject project = blackDuckClient.getProject(instanceUrl);
+        BlackDuckProject project = blackDuckClient.getBlackDuckProject(instanceUrl);
         logBanner("Fetched project: " + project.getProjectName());
 //        latestProjects.add(project);
 //        if (isNewProject(project, existingProjects)) {
