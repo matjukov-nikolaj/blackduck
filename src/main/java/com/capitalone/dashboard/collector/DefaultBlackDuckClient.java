@@ -2,23 +2,11 @@ package com.capitalone.dashboard.collector;
 
 import com.capitalone.dashboard.model.BlackDuckProject;
 import com.capitalone.dashboard.model.BlackDuck;
-import com.opencsv.CSVReader;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.*;
-
-import org.apache.commons.csv.CSVParser;
-
-import java.io.FileReader;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URLConnection;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -39,79 +27,121 @@ public class DefaultBlackDuckClient implements BlackDuckClient {
     private static final String DATE_FORMAT = "MMMM d, yyyy h:mm a";
     private Map<String, String> metrics = new HashMap<>();
 
-    private BlackDuckProject project = new BlackDuckProject();
-    private BlackDuck blackDuckMetrics = new BlackDuck();
+    private BlackDuckProject project;
+    private BlackDuck blackDuck;
     private BlackDuckSettings settings;
 
     @Autowired
     public DefaultBlackDuckClient(BlackDuckSettings settings) {
         this.settings = settings;
-        this.initializationMetrics();
     }
 
     @Override
-    public BlackDuckProject getBlackDuckProject(String instanceUrl) {
-        BlackDuckProject project = new BlackDuckProject();
+    public BlackDuckProject getProject() {
+        return this.project;
+    }
+
+    @Override
+    public BlackDuck getCurrentMetrics(BlackDuckProject project) {
+        this.blackDuck.setName(project.getProjectName());
+        this.blackDuck.setMetrics(this.metrics);
+        this.blackDuck.setUrl(project.getInstanceUrl());
+        this.blackDuck.setTimestamp(Long.parseLong(project.getProjectTimestamp(), 10));
+        return this.blackDuck;
+    }
+
+    @Override
+    public void parseDocument(String instanceUrl) {
         try {
+            this.initializationMetrics();
             instanceUrl = getUrlWithUserData(instanceUrl);
             Document document = getDocument(instanceUrl);
             if (document != null) {
-                project = getProject(document);
-                project.setInstanceUrl(instanceUrl);
+                parseBlackDuckDocument(document);
+                this.project.setInstanceUrl(instanceUrl);
             }
         } catch (Exception e) {
             LOG.error(e);
         }
-        return project;
     }
 
-    @Override
-    public BlackDuck currentBlackDuckMetrics(BlackDuckProject project) {
-        BlackDuck blackDuck = new BlackDuck();
-        try {
-            initializationMetrics();
-        } catch (Exception e) {
-            LOG.error(e);
+    private void parseBlackDuckDocument(Document document) {
+        NodeList trTags = document.getElementsByTagName(TR_TAG);
+        for (int i = 0; i < trTags.getLength(); ++i) {
+            Node trTag = trTags.item(i);
+            String fieldName = getNodeValue(trTag);
+            checkNodeValue(fieldName, trTag);
+            if (this.project.getProjectTimestamp() != null){
+                break;
+            }
         }
-        return blackDuck;
+    }
+
+    private void checkNodeValue(String fieldName, Node trTag) {
+        switch (fieldName) {
+            case PROJECT_NAME:
+                updateProjectName(trTag);
+                break;
+            case NUMBER_OF_FILES:
+                updateNumberOfFiles(trTag);
+                break;
+            case FILES_PENDING_IDENTIFICATION:
+                updateNumberOfFilesPendingIdentification(trTag);
+                break;
+            case FILES_WITH_VIOLATIONS:
+                updateNumberOfFilesWithViolations(trTag);
+                break;
+            case PROJECT_TIMESTAMP:
+                updateProjectTimestamp(trTag);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void updateProjectName(Node trTag) {
+        this.project.setProjectName(getFieldValue(trTag));
+    }
+
+    private void updateNumberOfFiles(Node trTag) {
+        this.metrics.put(NUMBER_OF_FILES, getFieldValue(trTag));
+    }
+
+    private void updateNumberOfFilesPendingIdentification(Node trTag) {
+        this.metrics.put(FILES_PENDING_IDENTIFICATION, getFieldValue(trTag));
+    }
+
+    private void updateNumberOfFilesWithViolations(Node trTag) {
+        this.metrics.put(FILES_WITH_VIOLATIONS, getFieldValue(trTag));
+    }
+
+    private void updateProjectTimestamp(Node trTag) {
+        String date = getFieldValue(trTag);
+        this.project.setProjectTimestamp(Long.toString(getTimeStamp(date)));
+        addDateToProjectName(date);
+    }
+
+    private void addDateToProjectName(String date) {
+        String projectName = this.project.getProjectName();
+        this.project.setProjectName(getProjectName(projectName, date));
+    }
+
+    private String getFieldValue(Node trTag) {
+        Node tdTag = trTag.getLastChild();
+        return tdTag.getFirstChild().getNodeValue();
     }
 
     private void initializationMetrics() {
+        this.project = new BlackDuckProject();
+        this.blackDuck = new BlackDuck();
         this.metrics.put(NUMBER_OF_FILES, "");
         this.metrics.put(FILES_WITH_VIOLATIONS, "");
         this.metrics.put(FILES_PENDING_IDENTIFICATION, "");
     }
 
-    private BlackDuckProject getProject(Document document) {
-        BlackDuckProject project = new BlackDuckProject();
-        try {
-            NodeList trTags = document.getElementsByTagName(TR_TAG);
-            String projectName = "";
-            for (int i = 0; i < trTags.getLength(); ++i) {
-                Node trTag = trTags.item(i);
-                String value = getNodeValue(trTag);
-                if (value.equals(PROJECT_NAME)) {
-                    Node tdTag = trTag.getLastChild().getPreviousSibling();
-                    projectName = tdTag.getFirstChild().getNodeValue();
-                }
-                if (value.equals(PROJECT_TIMESTAMP)) {
-                    Node tdTag = trTag.getLastChild().getPreviousSibling();
-                    String date = tdTag.getFirstChild().getNodeValue();
-                    project.setProjectTimestamp(Long.toString(getTimeStamp(date)));
-                    project.setProjectName(getProjectName(projectName, date));
-                    break;
-                }
-            }
-        } catch (Exception e) {
-            LOG.error(e);
-        }
-        return project;
-    }
-
-
     private String getNodeValue(Node node) {
         Node thTag = node.getFirstChild();
-        return thTag.getNextSibling().getFirstChild().getNodeValue();
+        return thTag.getFirstChild().getNodeValue();
     }
 
     private String getProjectName(String name, String testingDate) {
@@ -147,13 +177,6 @@ public class DefaultBlackDuckClient implements BlackDuckClient {
         this.settings = settings;
     }
 
-//    private void initializationMetrics() {
-//        this.metrics.put(LOW, 0);
-//        this.metrics.put(MEDIUM, 0);
-//        this.metrics.put(HIGH, 0);
-//        this.metrics.put(TOTAL, 0);
-//    }
-
     private long getTimeStamp(String timestamp) {
         if (!timestamp.equals("")) {
             try {
@@ -166,8 +189,7 @@ public class DefaultBlackDuckClient implements BlackDuckClient {
         return 0;
     }
 
-    private Date getProjectDate(String timestamp)
-    {
+    private Date getProjectDate(String timestamp) {
         try {
             return new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH).parse(timestamp);
         } catch (java.text.ParseException e) {

@@ -72,13 +72,14 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
         clean(collector, existingProjects);
 
         String instanceUrl = collector.getBlackDuckServer();
-        BlackDuckProject project = blackDuckClient.getBlackDuckProject(instanceUrl);
+        blackDuckClient.parseDocument(instanceUrl);
+        BlackDuckProject project = blackDuckClient.getProject();
         logBanner("Fetched project: " + project.getProjectName());
-//        latestProjects.add(project);
-//        if (isNewProject(project, existingProjects)) {
-//            addNewProject(project, collector);
-//        }
-//        refreshData(enabledProject(collector, project));
+        latestProjects.add(project);
+        if (isNewProject(project, existingProjects)) {
+            addNewProject(project, collector);
+        }
+        refreshData(enabledProject(collector, project));
     }
 
     private boolean isNewProject(BlackDuckProject project, List<BlackDuckProject> existingProjects) {
@@ -93,7 +94,7 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
     }
 
     private void refreshData(BlackDuckProject project) {
-        BlackDuck blackDuck = blackDuckClient.currentBlackDuckMetrics(project);
+        BlackDuck blackDuck = blackDuckClient.getCurrentMetrics(project);
         if (blackDuck != null && isNewCheckMarxData(project, blackDuck)) {
             blackDuck.setCollectorItemId(project.getId());
             blackDuckRepository.save(blackDuck);
