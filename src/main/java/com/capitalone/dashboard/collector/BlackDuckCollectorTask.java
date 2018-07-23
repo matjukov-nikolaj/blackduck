@@ -68,14 +68,12 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
         Set<ObjectId> udId = new HashSet<>();
         udId.add(collector.getId());
         List<BlackDuckProject> existingProjects = blackDuckProjectRepository.findByCollectorIdIn(udId);
-        List<BlackDuckProject> latestProjects = new ArrayList<>();
         clean(collector, existingProjects);
 
         String instanceUrl = collector.getBlackDuckServer();
         blackDuckClient.parseDocument(instanceUrl);
         BlackDuckProject project = blackDuckClient.getProject();
         logBanner("Fetched project: " + project.getProjectName());
-        latestProjects.add(project);
         if (isNewProject(project, existingProjects)) {
             addNewProject(project, collector);
         }
@@ -95,7 +93,7 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
 
     private void refreshData(BlackDuckProject project) {
         BlackDuck blackDuck = blackDuckClient.getCurrentMetrics(project);
-        if (blackDuck != null && isNewCheckMarxData(project, blackDuck)) {
+        if (blackDuck != null && isNewData(project, blackDuck)) {
             blackDuck.setCollectorItemId(project.getId());
             blackDuckRepository.save(blackDuck);
         }
@@ -105,7 +103,7 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
         return blackDuckProjectRepository.findBlackDuckProject(collector.getId(), project.getProjectName(), project.getProjectTimestamp());
     }
 
-    private boolean isNewCheckMarxData(BlackDuckProject project, BlackDuck blackDuck) {
+    private boolean isNewData(BlackDuckProject project, BlackDuck blackDuck) {
         return blackDuckRepository.findByCollectorItemIdAndTimestamp(
                 project.getId(), blackDuck.getTimestamp()) == null;
     }
