@@ -1,8 +1,8 @@
 package com.capitalone.dashboard.model;
 
-import codesecurity.model.CodeSecurityProject;
+import codesecurity.collectors.model.CodeSecurityProject;
 
-public class BlackDuckProject extends CodeSecurityProject {
+public class AppScanProject extends CodeSecurityProject {
 
     public static final String PROJECT_TIMESTAMP = "projectTimestamp";
 
@@ -15,9 +15,8 @@ public class BlackDuckProject extends CodeSecurityProject {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        BlackDuckProject that = (BlackDuckProject) o;
-        return getProjectTimestamp().equals(that.getProjectTimestamp())
-                && getInstanceUrl().equals(that.getInstanceUrl())
+        AppScanProject that = (AppScanProject) o;
+        return getInstanceUrl().equals(that.getInstanceUrl())
                 && getProjectName().equals(that.getProjectName());
     }
 
