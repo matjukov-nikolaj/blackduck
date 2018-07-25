@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import codesecurity.collectors.collector.CodeSecuritySettings;
 
 @Component
-@ConfigurationProperties(prefix = "appscan")
-public class AppScanSettings extends CodeSecuritySettings{
+@ConfigurationProperties(prefix = "blackduck")
+public class BlackDuckSettings extends CodeSecuritySettings{
 }
 
