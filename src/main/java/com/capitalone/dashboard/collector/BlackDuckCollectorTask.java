@@ -92,6 +92,9 @@ public class BlackDuckCollectorTask extends CollectorTask<BlackDuckCollector> {
     }
 
     private void refreshData(BlackDuckProject project) {
+        if (project == null) {
+            return;
+        }
         BlackDuck blackDuck = blackDuckClient.getCurrentMetrics(project);
         if (blackDuck != null && isNewData(project, blackDuck)) {
             blackDuck.setCollectorItemId(project.getId());

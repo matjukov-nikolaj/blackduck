@@ -8,7 +8,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.*;
-
 import java.util.*;
 
 @Component("DefaultBlackDuckClient")
@@ -59,21 +58,20 @@ public class DefaultBlackDuckClient extends DefaultCodeSecurityClient<BlackDuck,
         return this.settings.getPassword();
     }
 
-    protected void parseCodeSecurityDocument(Document document) {
-        try {
-            NodeList trTags = document.getElementsByTagName(TR_TAG);
-            for (int i = 0; i < trTags.getLength(); ++i) {
-                Node trTag = trTags.item(i);
-                String fieldName = getNodeValue(trTag);
-                checkNodeValue(fieldName, trTag);
-                if (this.project.getProjectTimestamp() != null) {
-                    break;
-                }
-            }
-            setBlackDuckMetrics();
-        } catch (Exception e) {
-            LOG.error(e);
+    protected void parseCodeSecurityDocument(Document document) throws Exception {
+        NodeList trTags = document.getElementsByTagName(TR_TAG);
+        if (trTags.getLength() == 0) {
+            throw new NullPointerException();
         }
+        for (int i = 0; i < trTags.getLength(); ++i) {
+            Node trTag = trTags.item(i);
+            String fieldName = getNodeValue(trTag);
+            checkNodeValue(fieldName, trTag);
+            if (this.project.getProjectTimestamp() != null) {
+                break;
+            }
+        }
+        setBlackDuckMetrics();
     }
 
     protected void initializationFields() {
