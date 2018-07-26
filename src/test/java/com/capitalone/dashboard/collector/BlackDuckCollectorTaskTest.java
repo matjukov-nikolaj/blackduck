@@ -97,7 +97,7 @@ public class BlackDuckCollectorTaskTest extends BlackDuckTestUtils {
         assertEquals(project, expectedProject);
         assertTrue(project.equals(expectedProject));
         verify(mockProjectRepository).save(project);
-        verify(mockProjectRepository).findBlackDuckProject(collector.getId(), project.getProjectTimestamp(), project.getProjectName());
+        verify(mockProjectRepository).findBlackDuckProject(collector.getId(), project.getProjectName(), project.getProjectTimestamp());
     }
 
     private ArrayList<com.capitalone.dashboard.model.Component> components() {
