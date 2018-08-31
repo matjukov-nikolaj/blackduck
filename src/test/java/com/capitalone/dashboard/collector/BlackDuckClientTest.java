@@ -1,5 +1,6 @@
 package com.capitalone.dashboard.collector;
 
+import codesecurity.config.Constants;
 import com.capitalone.dashboard.model.BlackDuckProject;
 import com.capitalone.dashboard.model.BlackDuck;
 import org.junit.Before;
@@ -12,6 +13,7 @@ import org.xml.sax.SAXParseException;
 import java.text.ParseException;
 import java.util.Map;
 import static junit.framework.TestCase.assertTrue;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -53,12 +55,16 @@ public class BlackDuckClientTest extends BlackDuckTestUtils {
     @Test
     public void canGetCurrentBlackDuckMetrics() {
         blackDuckClient.parseDocument(settings.getServer());
+
         BlackDuckProject project = blackDuckClient.getProject();
         BlackDuck blackDuck = blackDuckClient.getCurrentMetrics(project);
-        Map<String, String> metrics = blackDuck.getMetrics();
-        assertEquals("48,244", metrics.get(NUMBER_OF_FILES));
-        assertEquals("36 (0.07%)", metrics.get(FILES_WITH_VIOLATIONS));
-        assertEquals("42,038 (87.14%)", metrics.get(FILES_PENDING_IDENTIFICATION));
+        Map<String, Integer> metrics = blackDuck.getMetrics();
+        assertThat(metrics.get(Constants.BlackDuck.NUMBER_OF_FILES)).isEqualTo(48244);
+        assertThat(metrics.get(Constants.BlackDuck.FILES_WITH_VIOLATIONS)).isEqualTo(36);
+        assertThat(metrics.get(Constants.BlackDuck.FILES_PENDING_IDENTIFICATION)).isEqualTo(42038);
+        Map<String, Double> percentages = blackDuck.getPercentages();
+        assertThat(percentages.get(Constants.BlackDuck.FILES_PENDING_IDENTIFICATION)).isEqualTo(87.14);
+        assertThat(percentages.get(Constants.BlackDuck.FILES_WITH_VIOLATIONS)).isEqualTo(0.07);
     }
 
     @Test

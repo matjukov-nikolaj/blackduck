@@ -49,7 +49,7 @@ public class BlackDuckCollectorTaskTest extends BlackDuckTestUtils {
 
         client = new DefaultBlackDuckClient(settings);
         this.task = new BlackDuckCollectorTask(mockScheduler, mockCollectorRepository, mockProjectRepository,
-                mockRepository, client, settings, mockComponentRepository);
+                mockRepository, client, settings);
     }
 
     @Test
@@ -65,6 +65,7 @@ public class BlackDuckCollectorTaskTest extends BlackDuckTestUtils {
         AssertionsForClassTypes.assertThat(collector.getAllFields().get("instanceUrl")).isEqualTo("");
         AssertionsForClassTypes.assertThat(collector.getAllFields().get("projectName")).isEqualTo("");
         AssertionsForClassTypes.assertThat(collector.getAllFields().get("projectTimestamp")).isEqualTo("");
+        AssertionsForClassTypes.assertThat(collector.getAllFields().get("projectDate")).isEqualTo(null);
         AssertionsForClassTypes.assertThat(collector.getUniqueFields().get("instanceUrl")).isEqualTo("");
         AssertionsForClassTypes.assertThat(collector.getUniqueFields().get("projectName")).isEqualTo("");
     }
